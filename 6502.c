@@ -7,7 +7,16 @@ void power_up(cpu_6502 *cpu) {
     cpu->Y = 0;
     cpu->pc = 0;
     cpu->S = 0xFD;
-    cpu->P = 0;
+    cpu->P = 0x24;
+}
+
+void reset(cpu_6502 *cpu, uint8_t *memory) {
+    cpu->A = 0;
+    cpu->X = 0;
+    cpu->Y = 0;
+    cpu->pc = memory[0xFFFC] | (memory[0xFFFD] << 8);
+    cpu->S = 0xFD;
+    cpu->P = 0x24;
 }
 
 void step(cpu_6502 *cpu,uint8_t* memory) {
