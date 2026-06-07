@@ -13,6 +13,10 @@ void power_up(cpu_6502 *cpu) {
 void step(cpu_6502 *cpu,uint8_t* memory) {
     uint8_t opcode = mem_read(memory,cpu->pc++);
     uint8_t value;
+    uint8_t low;
+    uint8_t high;
+    uint16_t target;
+    uint16_t return_addr;
     switch(opcode){
         case 0xA9:{
             value = mem_read(memory, cpu->pc++);
@@ -89,37 +93,106 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             cpu->Y--;
             break;
         }
-        case 0x4C:{
-            value = mem_read(memory, cpu->pc++);
-            cpu->pc = value;
+        case 0x4C: {
+            low = mem_read(memory, cpu->pc++);
+            high = mem_read(memory, cpu->pc++);
+
+            cpu->pc = ((uint16_t)high << 8) | low;
             break;
         }
-        case 0x20:
+        case 0x20:{
+            low = mem_read(memory, cpu->pc++);
+            high = mem_read(memory, cpu->pc++);
+
+            target = ((uint16_t)high << 8) | low;
+
+            return_addr = cpu->pc - 1;
+
+            cpu->S--;
+            memory[0x0100 + cpu->S] = (return_addr >> 8) & 0xFF;
+            
+            cpu->S--;
+            memory[0x0100 + cpu->S] = return_addr & 0xFF;
+            
+
+            cpu->pc = target;
+
             break;
-        case 0x60:
+        }
+        case 0x60:{
+            cpu->S++;
+            low = memory[0x0100 + cpu->S];
+            cpu->S++; 
+            high = memory[0x0100 + cpu->S];
+
+            target = ((uint16_t)high << 8) | low;
+
+            cpu->pc = target+1;
+
             break;
-        case 0x48:
+        }
+        case 0x48:{
+            cpu->S--;
+            memory[0x0100 + cpu->S] = cpu->A;
+            
+
             break;
-        case 0x68:
+        }
+        case 0x68:{
+            cpu->S++;
+            cpu->A = memory[0x0100 + cpu->S];
+
             break;
-        case 0x08:
+        }
+        case 0x08:{
+            cpu->S--;
+            memory[0x0100 + cpu->S] = cpu->P;
+            
+
             break;
-        case 0x28:
+        }
+        case 0x28:{
+            cpu->S++;
+            cpu->P = memory[0x0100 + cpu->S];
+            
+
             break;
-        case 0x18:
+        }
+        case 0x18:{
+            cpu->P &= ~0x01;
+
             break;
-        case 0x38:
+        }
+        case 0x38:{
+            cpu->P |= 0x01;
+
             break;
-        case 0x58:
+        }
+        case 0x58:{
+            cpu->P &= ~0x04;
+
             break;
-        case 0x78:
+        }
+        case 0x78:{
+            cpu->P |= 0x04;
+
             break;
-        case 0xB8:
+        }
+        case 0xB8:{
+            cpu->P &= ~0x40;
+
             break;
-        case 0xD8:
+        }
+        case 0xD8:{
+            cpu->P &= ~0x08;
+
             break;
-        case 0xF8:
-            break;   
+        }
+        case 0xF8:{
+            cpu->P |= 0x08;
+
+            break;
+        }  
         default:
             printf("unknown opcode 0x%X\n",opcode);
             break;
