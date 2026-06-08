@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "6502.h"
+#include "memory.h"
 
 void power_up(cpu_6502 *cpu) {
     cpu->A = 0;
@@ -43,62 +44,42 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0xAA:{
-            //value = mem_read(memory, cpu->pc++);
-            cpu->pc++;
             cpu->X = cpu->A;
             break;
         }
         case 0xA8:{
-            //value = mem_read(memory, cpu->pc++);
-            cpu->pc++;
             cpu->Y = cpu->A;
             break;
         }
         case 0x8A:{
-            //value = mem_read(memory, cpu->pc++);
-            cpu->pc++;
             cpu->A = cpu->X;
             break;
         }
         case 0x98:{
-            //value = mem_read(memory, cpu->pc++);
-            cpu->pc++;
             cpu->A = cpu->Y;
             break;
         }
         case 0xBA:{
-            //value = mem_read(memory, cpu->pc++);
-            cpu->pc++;
             cpu->X = cpu->S;
             break;
         }
         case 0x9A:{
-            //value = mem_read(memory, cpu->pc++);
-            cpu->pc++;
             cpu->S = cpu->X;
             break;
         }
         case 0xE8:{
-            //value = mem_read(memory, cpu->pc++);
-            cpu->pc++;
             cpu->X++;
             break;
         }
         case 0xC8:{
-            //value = mem_read(memory, cpu->pc++);
-            cpu->pc++;
             cpu->Y++;
             break;
         } 
         case 0xCA:{
-            //value = mem_read(memory, cpu->pc++);
-            cpu->pc++;
             cpu->X--;
             break;
         }
         case 0x88:{
-            //value = mem_read(memory, cpu->pc++);
-            cpu->pc++;
             cpu->Y--;
             break;
         }

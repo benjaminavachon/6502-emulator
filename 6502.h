@@ -14,7 +14,6 @@ typedef struct {
 
 void power_up(cpu_6502 *cpu);
 void reset(cpu_6502 *cpu, uint8_t *memory);
-
 void step(cpu_6502 *cpu, uint8_t *memory);
 
 #endif
