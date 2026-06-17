@@ -38,7 +38,7 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0x05:{
-            cpu->A |= zeropage(memory, cpu->pc++, cpu->X);
+            cpu->A |= zeropage(memory, cpu->pc++);
             break;
         }
         case 0x06:{
@@ -206,18 +206,41 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0x24:{
-            //TODO
-            cpu->A = immediate(memory, cpu->pc++);
+            uint8_t zp = zeropage(memory, cpu->pc++);
+            (cpu->A & zp) == 0 ? cpu->P |= 0x02 : cpu->P &= ~0x02;
+            
+            cpu->P = (zp & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
+            cpu->P = (zp & 0x40) ? (cpu->P | 0x40) : (cpu->P & ~0x40);
             break;
         }
         case 0x25:{
-            //TODO
-            cpu->A = immediate(memory, cpu->pc++);
+
+            uint8_t zp = zeropage(memory, cpu->pc++);
+            cpu->A &= zp;
+            
+            (cpu->A == 0) ? cpu->P |= 0x02 : cpu->P &= ~0x02;
+            cpu->P = (zp & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
+
             break;
         }
         case 0x26:{
-            //TODO
-            cpu->A = immediate(memory, cpu->pc++);
+            
+            uint8_t addr = memory[cpu->pc];
+            uint8_t zp = memory[addr];
+
+            uint8_t old = cpu->P & 0x01;
+
+            cpu->P = (zp & 0x80) ? (cpu->P | 0x01) : (cpu->P & ~0x01);
+
+            uint8_t result = (zp << 1) | old;
+
+            memory[addr] = result;
+
+            cpu->P = (result & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
+            cpu->P = (result == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+
+            cpu->pc += 1;
+
             break;
         }
         case 0x28:{
@@ -228,74 +251,112 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0x29:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
+            uint8_t val = immediate(memory,cpu->pc++);
+            cpu->A &= val;
             
+            (cpu->A == 0) ? cpu->P |= 0x02 : cpu->P &= ~0x02;
+            cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
 
             break;
         }
         case 0x2A:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            uint8_t zp = cpu->A;
+
+            uint8_t old = cpu->P & 0x01;
+
+            cpu->P = (zp & 0x80) ? (cpu->P | 0x01) : (cpu->P & ~0x01);
+
+            uint8_t result = (zp << 1) | old;
+
+            cpu->A = result;
+
+            cpu->P = (result & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
+            cpu->P = (result == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
 
             break;
         }
         case 0x2C:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
+            uint8_t val = absolute(memory, cpu->pc++);
+            (cpu->A & val) == 0 ? (cpu->P |= 0x02) : (cpu->P &= ~0x02);
             
-
+            cpu->P = (val & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
+            cpu->P = (val & 0x40) ? (cpu->P | 0x40) : (cpu->P & ~0x40);
             break;
         }
         case 0x2D:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
+            uint8_t val = absolute(memory, cpu->pc++);
+            cpu->A &= val;
             
+            cpu->P = (cpu->A == 0) ? cpu->P | 0x02 : cpu->P & ~0x02;
+            cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
 
             break;
         }
         case 0x2E:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            uint16_t addr = memory[cpu->pc] | (memory[cpu->pc + 1] << 8);
+            uint8_t val = memory[addr];
+
+            uint8_t old = cpu->P & 0x01;
+
+            cpu->P = (val & 0x80) ? (cpu->P | 0x01) : (cpu->P & ~0x01);
+
+            uint8_t result = (val << 1) | old;
+            memory[addr] = result;
+
+            cpu->P = (result & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
+            cpu->P = (result == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+
+            cpu->pc+=2;
 
             break;
         }
         case 0x30:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            int8_t offset = (int8_t)memory[cpu->pc++];
+
+            if(cpu->P & 0x80) {
+                cpu->pc += offset;
+            }
 
             break;
         }
         case 0x31:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            uint8_t zp = memory[cpu->pc++];
+            uint16_t base = memory[zp] | (memory[(uint8_t)(zp + 1)] << 8);
+            uint16_t addr = base + cpu->Y;
+
+            cpu->A &= memory[addr];
+
+            cpu->P = (cpu->A == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
 
             break;
         }
         case 0x35:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
+            uint8_t zp = zeropageXindex(memory, cpu->pc++,cpu->X);
+            cpu->A &= zp;
             
+            (cpu->A == 0) ? cpu->P |= 0x02 : cpu->P &= ~0x02;
+            cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
 
             break;
         }
         case 0x36:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            uint8_t addr = memory[cpu->pc];
+            uint8_t x_addr = (addr + x) & 0xFF;
+            uint8_t zp = memory[x_addr];
+
+            uint8_t old = cpu->P & 0x01;
+
+            cpu->P = (zp & 0x80) ? (cpu->P | 0x01) : (cpu->P & ~0x01);
+
+            uint8_t result = (zp << 1) | old;
+
+            memory[x_addr] = result;
+
+            cpu->P = (result & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
+            cpu->P = (result == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+
+            cpu->pc += 1;
 
             break;
         }
@@ -305,26 +366,38 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0x39:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
+            uint8_t val = absoluteY(memory,cpu->pc++,cpu->Y);
+            cpu->A &= val;
             
+            cpu->P = (cpu->A == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
 
             break;
         }
         case 0x3D:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
+            uint8_t val = absoluteX(memory,cpu->pc++,cpu->X);
+            cpu->A &= val;
             
+            cpu->P = (cpu->A == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
 
             break;
         }
         case 0x3E:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            uint16_t addr = (memory[cpu->pc] | (memory[cpu->pc + 1] << 8)) + cpu->X;
+            uint8_t val = memory[addr];
+
+            uint8_t old = cpu->P & 0x01;
+
+            cpu->P = (val & 0x80) ? (cpu->P | 0x01) : (cpu->P & ~0x01);
+
+            uint8_t result = (val << 1) | old;
+            memory[addr] = result;
+
+            cpu->P = (result & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
+            cpu->P = (result == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+
+            cpu->pc+=2;
 
             break;
         }
@@ -337,26 +410,36 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0x41:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            uint8_t val = indirectXindex(memory,cpu->pc++,cpu->X);
+            cpu->A ^= val;
+            cpu->P = (cpu->A == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
 
             break;
         }
         case 0x45:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            uint8_t addr = memory[cpu->pc];
+            uint8_t val = zeropage(memory,cpu->pc++);
+            cpu->A ^= val;
+            cpu->P = (cpu->A == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
 
             break;
         }
         case 0x46:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            uint8_t addr = memory[cpu->pc];
+            uint8_t val = memory[addr];
+            if((val & 0x01) == 0) {
+                cpu->P &= ~0x01;
+            }else{
+                cpu->P |= 0x01;
+            }
+            memory[cpu->pc] = val>>1;
+
+            cpu->P = (memory[cpu->pc] == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P &= ~0x80;
+
+            cpu->pc+=1;
 
             break;
         }
@@ -368,20 +451,24 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0x49:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            uint8_t val = immediate(memory,cpu->pc++);
+            cpu->A ^= val;
+            cpu->P = (cpu->A == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
 
             break;
         }
         
         case 0x4A:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            if((cpu->A & 0x01) == 0) {
+                cpu->P &= ~0x01;
+            }else{
+                cpu->P |= 0x01;
+            }
+            cpu->A >>= 1;
 
+            cpu->P = (cpu->A == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P &= ~0x80;
             break;
         }
         case 0x4C: {
@@ -392,18 +479,31 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0x4D:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
-
+            uint8_t val = absolute(memory,cpu->pc);
+            cpu->A ^= val;
+            cpu->P = (cpu->A == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
+            cpu->pc+=1;
             break;
         }
         case 0x4E:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            uint8_t low = memory[cpu->pc];
+            uint8_t high = memory[cpu->pc+1];
+            uint16_t target = (((uint16_t)high << 8) | low); //memory address
+
+            uint8_t val = memory[target];
+
+            if((val & 0x01) == 0) {
+                cpu->P &= ~0x01;
+            }else{
+                cpu->P |= 0x01;
+            }
+            memory[target] = val>>1;
+
+            cpu->P = (memory[target] == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P &= ~0x80;
+
+            cpu->pc+=2;
 
             break;
         }
@@ -416,26 +516,37 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0x51:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            uint8_t val = indirectYindex(memory,cpu->pc++,cpu->Y);
+            cpu->A ^= val;
+            cpu->P = (cpu->A == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
 
             break;
         }
         case 0x55:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            uint8_t val = zeropageXindex(memory,cpu->pc++,cpu->X);
+            cpu->A ^= val;
+            cpu->P = (cpu->A == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
 
             break;
         }
         case 0x56:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            uint8_t zp = memory[cpu->pc++];
+            uint8_t addr = (zp + cpu->X) & 0xFF;
+
+            uint8_t val = memory[addr];
+            if((val & 0x01) == 0) {
+                cpu->P &= ~0x01;
+            }else{
+                cpu->P |= 0x01;
+            }
+            memory[addr] = val>>1;
+
+            cpu->P = (memory[addr] == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P &= ~0x80;
+
+            cpu->pc+=1;
 
             break;
         }
@@ -445,26 +556,39 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0x59:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
-
+            uint8_t val = absoluteY(memory,cpu->pc,cpu->Y);
+            cpu->A ^= val;
+            cpu->P = (cpu->A == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
+            cpu->pc+=2;
             break;
         }
         case 0x5D:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
-
+            uint8_t val = absoluteX(memory,cpu->pc,cpu->X);
+            cpu->A ^= val;
+            cpu->P = (cpu->A == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
+            cpu->pc+=2;
             break;
         }
         case 0x5E:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            uint8_t low = memory[cpu->pc];
+            uint8_t high = memory[cpu->pc+1];
+            uint16_t target = (((uint16_t)high << 8) | low) + cpu->X;
+
+            uint8_t val = memory[target];
+
+            if((val & 0x01) == 0) {
+                cpu->P &= ~0x01;
+            }else{
+                cpu->P |= 0x01;
+            }
+            memory[target] = val>>1;
+
+            cpu->P = (memory[target] == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P &= ~0x80;
+
+            cpu->pc+=2;
 
             break;
         }
