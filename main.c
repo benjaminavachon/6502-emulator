@@ -7,6 +7,10 @@ int main(){
     cpu_6502 cpu;
     power_up(&cpu);
 
+    reset(&cpu, memory);
+
+    
+
     memory[0x0000] = 0xA9; // LDA #$05
     memory[0x0001] = 0x05;
 

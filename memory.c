@@ -1,8 +1,17 @@
 #include "memory.h"
+#include "6502.h"
 #include <stdint.h>
 
 uint8_t mem_read(uint8_t *memory, uint16_t addr){
     return memory[addr];
+}
+
+void load_program(uint8_t *memory,const uint8_t *program,cpu_6502 *cpu, uint16_t start_addr, uint16_t size){
+    uint16_t i = 0;
+    for(i = 0; i < size;i++){
+        memory[start_addr + i] = program[i];
+    }
+    cpu->pc = start_addr;
 }
 
 uint16_t immediate(uint8_t *memory,uint16_t addr){

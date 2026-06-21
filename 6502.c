@@ -8,7 +8,7 @@ void power_up(cpu_6502 *cpu) {
     cpu->Y = 0;
     cpu->pc = 0;
     cpu->S = 0xFD;
-    cpu->P = 0x24;
+    cpu->P = 0x34;
 }
 
 void reset(cpu_6502 *cpu, uint8_t *memory) {
@@ -65,7 +65,7 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0x09:{
-            cpu->A |= immediate(memory, cpu->pc++, cpu->X);
+            cpu->A |= immediate(memory, cpu->pc++);
             break;
         }
         case 0x0A:{
@@ -79,7 +79,7 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0x0D:{
-            cpu->A |= absolute(memory, cpu->pc++, cpu->X);
+            cpu->A |= absolute(memory, cpu->pc++);
             break;
         }
         case 0x0E:{
@@ -207,7 +207,7 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
         }
         case 0x24:{
             uint8_t zp = zeropage(memory, cpu->pc++);
-            (cpu->A & zp) == 0 ? cpu->P |= 0x02 : cpu->P &= ~0x02;
+            (cpu->A & zp) == 0 ? (cpu->P |= 0x02) : (cpu->P &= ~0x02);
             
             cpu->P = (zp & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
             cpu->P = (zp & 0x40) ? (cpu->P | 0x40) : (cpu->P & ~0x40);
@@ -218,7 +218,7 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             uint8_t zp = zeropage(memory, cpu->pc++);
             cpu->A &= zp;
             
-            (cpu->A == 0) ? cpu->P |= 0x02 : cpu->P &= ~0x02;
+            (cpu->A == 0) ? (cpu->P |= 0x02) : (cpu->P &= ~0x02);
             cpu->P = (zp & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
 
             break;
@@ -254,7 +254,7 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             uint8_t val = immediate(memory,cpu->pc++);
             cpu->A &= val;
             
-            (cpu->A == 0) ? cpu->P |= 0x02 : cpu->P &= ~0x02;
+            (cpu->A == 0) ? (cpu->P |= 0x02) : (cpu->P &= ~0x02);
             cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
 
             break;
@@ -335,14 +335,14 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             uint8_t zp = zeropageXindex(memory, cpu->pc++,cpu->X);
             cpu->A &= zp;
             
-            (cpu->A == 0) ? cpu->P |= 0x02 : cpu->P &= ~0x02;
+            (cpu->A == 0) ? (cpu->P |= 0x02) : (cpu->P &= ~0x02);
             cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
 
             break;
         }
         case 0x36:{
             uint8_t addr = memory[cpu->pc];
-            uint8_t x_addr = (addr + x) & 0xFF;
+            uint8_t x_addr = (addr + cpu->X) & 0xFF;
             uint8_t zp = memory[x_addr];
 
             uint8_t old = cpu->P & 0x01;
@@ -402,10 +402,17 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0x40:{
-            //TODO
             cpu->S++;
+
             cpu->P = memory[0x0100 + cpu->S];
-            
+            cpu->S++;
+
+            uint8_t pcl = memory[0x0100 + cpu->S];
+            cpu->S++;
+
+            uint8_t pch = memory[0x0100 + cpu->S];
+
+            cpu->pc = ((uint16_t)pch << 8) | pcl;
 
             break;
         }
@@ -508,10 +515,11 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0x50:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            int8_t offset = (int8_t)memory[cpu->pc++];
+
+            if ((cpu->P & 0x40) == 0) { // V flag clear
+                cpu->pc += offset;
+            }
 
             break;
         }
@@ -736,10 +744,11 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0x70:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            int8_t offset = (int8_t)memory[cpu->pc++];
+
+            if (cpu->P & 0x40) {
+                cpu->pc += offset;
+            }
 
             break;
         }
@@ -922,10 +931,11 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0x90:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            int8_t offset = (int8_t)memory[cpu->pc++];
+
+            if ((cpu->P & 0x01) == 0) {
+                cpu->pc += offset;
+            }
 
             break;
         }
@@ -1099,9 +1109,11 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0xB0:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
+            int8_t offset = (int8_t)memory[cpu->pc++];
+
+            if (cpu->P & 0x01) { // Carry set
+                cpu->pc += offset;
+            }
 
             break;
         }
@@ -1144,7 +1156,7 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0xB9:{
-            cpu->A = absoluteY(memory, cpu->pc+1);
+            cpu->A = absoluteY(memory, cpu->pc+1, cpu->Y);
 
             cpu->P = (cpu->A == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
             cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
@@ -1161,7 +1173,7 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0xBC:{
-            cpu->Y = absoluteX(memory, cpu->pc+1);
+            cpu->Y = absoluteX(memory, cpu->pc+1,cpu->X);
 
             cpu->P = (cpu->Y == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
             cpu->P = (cpu->Y & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
@@ -1315,10 +1327,11 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0xD0:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            int8_t offset = (int8_t)memory[cpu->pc++];
+
+            if ((cpu->P & 0x02) == 0) {
+                cpu->pc += offset;
+            }
 
             break;
         }
@@ -1476,8 +1489,8 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
         case 0xE8:{
             cpu->X++;
 
-            cpu->P = (cpu->++ == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
-            cpu->P = (cpu->++ & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
+            cpu->P = (cpu->X == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);
+            cpu->P = (cpu->X & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
 
             break;
         }
@@ -1543,10 +1556,11 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0xF0:{
-            //TODO
-            cpu->S++;
-            cpu->P = memory[0x0100 + cpu->S];
-            
+            int8_t offset = (int8_t)memory[cpu->pc++];
+
+            if (cpu->P & 0x02) { // Z flag set
+                cpu->pc += offset;
+            }
 
             break;
         }
