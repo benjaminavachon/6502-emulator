@@ -5,7 +5,7 @@
 #include "6502.h"
 
 uint8_t mem_read(uint8_t *memory, uint16_t addr);
-void load_program(uint8_t *memory,const uint8_t *program,cpu_6502 *cpu, uint16_t start_addr, uint16_t size);
+void load_program(uint8_t *memory,const uint8_t *rom);
 
 uint16_t immediate(uint8_t *memory,uint16_t addr);
 uint16_t zeropage(uint8_t *memory,uint16_t addr);

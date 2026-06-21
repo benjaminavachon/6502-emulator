@@ -17,7 +17,7 @@ void reset(cpu_6502 *cpu, uint8_t *memory) {
     cpu->Y = 0;
     cpu->pc = memory[0xFFFC] | (memory[0xFFFD] << 8);
     cpu->S = 0xFD;
-    cpu->P = 0x24;
+    cpu->P = 0x34;
 }
 
 void step(cpu_6502 *cpu,uint8_t* memory) {
@@ -29,8 +29,21 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
     uint16_t return_addr;
     switch(opcode){
         case 0x00:{
-            cpu->P |= 0x10;
+            cpu->pc++;
+
+            memory[0x0100 + cpu->S] = (cpu->pc >> 8) & 0xFF;
+            cpu->S--;
+
+            memory[0x0100 + cpu->S] = cpu->pc & 0xFF;
+            cpu->S--;
+
+            memory[0x0100 + cpu->S] = cpu->P | 0x10;
+            cpu->S--;
+
             cpu->P |= 0x04;
+
+            cpu->pc = memory[0xFFFE] | (memory[0xFFFF] << 8);
+
             break;
         }
         case 0x01:{
@@ -100,12 +113,9 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
         case 0x10:{
             int8_t offset = (int8_t)memory[cpu->pc++];
 
-            uint16_t old_pc = cpu->pc;
-
             if ((cpu->P & 0x80) == 0) {
-                cpu->pc = old_pc + offset;
+                cpu->pc = (uint16_t)(cpu->pc + offset);
             }
-
             break;
         }
         case 0x11:{
@@ -404,13 +414,15 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
         case 0x40:{
             cpu->S++;
 
-            cpu->P = memory[0x0100 + cpu->S];
+            uint8_t p = memory[0x0100 + cpu->S];
             cpu->S++;
 
             uint8_t pcl = memory[0x0100 + cpu->S];
             cpu->S++;
 
             uint8_t pch = memory[0x0100 + cpu->S];
+
+            cpu->P = (p & ~0x10) | 0x20; // ignore B, set unused bit
 
             cpu->pc = ((uint16_t)pch << 8) | pcl;
 
@@ -1090,7 +1102,7 @@ void step(cpu_6502 *cpu,uint8_t* memory) {
             break;
         }
         case 0xAD:{
-            cpu->A = absolute(memory, cpu->pc+1);
+            cpu->A = absolute(memory, cpu->pc);
 
             cpu->P = (cpu->A & 0x80) ? (cpu->P | 0x80) : (cpu->P & ~0x80);
             cpu->P = (cpu->A == 0) ? (cpu->P | 0x02) : (cpu->P & ~0x02);

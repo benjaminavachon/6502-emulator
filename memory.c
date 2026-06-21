@@ -1,17 +1,18 @@
 #include "memory.h"
 #include "6502.h"
 #include <stdint.h>
+#include <string.h>
+#include <stdio.h>
 
 uint8_t mem_read(uint8_t *memory, uint16_t addr){
     return memory[addr];
 }
 
-void load_program(uint8_t *memory,const uint8_t *program,cpu_6502 *cpu, uint16_t start_addr, uint16_t size){
-    uint16_t i = 0;
-    for(i = 0; i < size;i++){
-        memory[start_addr + i] = program[i];
-    }
-    cpu->pc = start_addr;
+void load_program(uint8_t *memory,const uint8_t *rom){
+    const uint8_t *prg = rom + 0x10;
+
+    memcpy(&memory[0x8000], prg, 0x4000);
+    memcpy(&memory[0xC000], prg, 0x4000);
 }
 
 uint16_t immediate(uint8_t *memory,uint16_t addr){
@@ -53,6 +54,7 @@ uint16_t absolute(uint8_t *memory,uint16_t addr){
     uint8_t low = memory[addr];
     uint8_t high = memory[addr+1];
     uint16_t target = (((uint16_t)high << 8) | low);
+
     return memory[target]; 
 }
 uint16_t absoluteX(uint8_t *memory,uint16_t addr, uint8_t x){
